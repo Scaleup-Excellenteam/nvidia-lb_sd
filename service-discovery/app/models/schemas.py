@@ -19,3 +19,13 @@ class EndpointIn(BaseModel):
 
 class EndpointOut(EndpointIn):
     last_heartbeat: Optional[float] = None
+
+class SystemPartIn(BaseModel):
+    id: str  # unique id, e.g. "orchestrator-1"
+    kind: str  # category, e.g. "orchestrator", "billing", "telemetry"
+    url: Optional[str] = None  # optional health URL (e.g. http://host:port/health)
+    status: Status = Status.UP
+    meta: Optional[Dict[str, str]] = None
+
+class SystemPartOut(SystemPartIn):
+    last_heartbeat: Optional[float] = None
