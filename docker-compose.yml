@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  service-discovery:
+    build:
+      context: .
+      dockerfile: service-discovery/Dockerfile
+    image: sd-mock:latest
+    container_name: sd-mock
+    ports:
+      - "7000:7000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:7000/readyz').status==200 else sys.exit(1)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 25
+    networks: [ demo-net ]
+
+  load-balancer:
+    build:
+      context: .
+      dockerfile: load-balancer/Dockerfile
+    image: lb-mock:latest
+    container_name: lb-mock
+    environment:
+      # talk to SD over the internal docker network (service name acts as DNS)
+      SERVICE_DISCOVERY_URL: "http://service-discovery:7000"
+    depends_on:
+      - service-discovery
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/readyz').status==200 else sys.exit(1)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 25
+    networks: [ demo-net ]
+
+  backend-9001:
+    image: python:3.12-slim
+    container_name: backend-9001
+    working_dir: /srv
+    command: python -m http.server 9000
+    ports:
+      - "9001:9000"
+    networks: [ demo-net ]
+
+  backend-9002:
+    image: python:3.12-slim
+    container_name: backend-9002
+    working_dir: /srv
+    command: python -m http.server 9000
+    ports:
+      - "9002:9000"
+    networks: [ demo-net ]
+
+networks:
+  demo-net: {}

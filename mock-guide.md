@@ -1,4 +1,4 @@
-got you — here’s a **short, copy-pasteable run guide** for the mock flow on both Windows and Linux.
+# Mock Guide
 
 # Windows (PowerShell)
 

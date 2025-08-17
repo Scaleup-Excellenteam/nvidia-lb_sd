@@ -29,20 +29,38 @@
 │   │       └── proxy.py
 │   ├── Dockerfile
 │   ├── pyproject.toml
+│   ├── requirements.txt
 │   ├── tests
 │   │   ├── test_algorithms.py
 │   │   └── test_routing.py
 │   └── tree.txt
+├── mock-guide.md
 ├── README.md
 ├── service-discovery
 │   ├── app
 │   │   ├── api
+│   │   │   ├── __init__.py
+│   │   │   └── routes.py
 │   │   ├── core
+│   │   │   ├── config.py
+│   │   │   ├── __init__.py
+│   │   │   └── logging.py
+│   │   ├── __init__.py
+│   │   ├── main.py
 │   │   ├── metrics
+│   │   │   ├── __init__.py
+│   │   │   └── prometheus.py
 │   │   ├── models
+│   │   │   ├── __init__.py
+│   │   │   └── schemas.py
 │   │   └── services
+│   │       ├── health.py
+│   │       ├── __init__.py
+│   │       └── registry.py
+│   ├── Dockerfile
+│   ├── requirments.txt
 │   ├── tests
 │   └── tree.txt
 └── tree.txt
 
-20 directories, 26 files
+20 directories, 44 files
