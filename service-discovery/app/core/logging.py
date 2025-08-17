@@ -1,3 +1,4 @@
+"""Basic logging configuration for the Service Discovery mock."""
 import logging
 
 logging.basicConfig(

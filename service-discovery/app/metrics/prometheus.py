@@ -1,3 +1,4 @@
+"""Prometheus metrics endpoint for the Service Discovery mock."""
 from fastapi import APIRouter, Response
 from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
@@ -10,6 +11,7 @@ SD_ENDPOINTS = Gauge("sd_endpoints", "Current endpoints known to SD", registry=r
 
 @metrics_router.get("/metrics")
 async def metrics():
+    """Expose Prometheus metrics collected for the mock SD service."""
     # Minimal example metrics; we set a placeholder count
     SD_HEALTHCHECKS.inc(0)
     SD_ENDPOINTS.set(3)
