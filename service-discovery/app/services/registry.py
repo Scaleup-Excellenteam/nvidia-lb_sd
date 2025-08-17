@@ -1,19 +1,18 @@
-"""In-memory endpoint registry used by the Service Discovery mock."""
 from threading import RLock
 from time import monotonic
 from typing import Dict, List, Optional
-from app.models.schemas import EndpointIn, EndpointOut, Status
+from app.models.schemas import EndpointIn, EndpointOut, Status, SystemPartIn, SystemPartOut
 
 class Registry:
     """In-memory mock registry. Thread-safe and simple."""
     def __init__(self):
-        """Initialize registry structures and a re-entrant lock."""
         self._endpoints: Dict[str, EndpointOut] = {}
         self._by_image: Dict[str, set[str]] = {}
+        self._parts: Dict[str, SystemPartOut] = {}
+        self._by_kind: Dict[str, set] = {}
         self._lock = RLock()
 
     def upsert(self, ep: EndpointIn) -> EndpointOut:
-        """Create or update an endpoint and index it by image id."""
         with self._lock:
             out = EndpointOut(**ep.model_dump(), last_heartbeat=monotonic())
             self._endpoints[ep.id] = out
@@ -21,7 +20,6 @@ class Registry:
             return out
 
     def deregister(self, endpoint_id: str) -> bool:
-        """Remove an endpoint; returns True when it existed and was removed."""
         with self._lock:
             ep = self._endpoints.pop(endpoint_id, None)
             if not ep:
@@ -34,7 +32,6 @@ class Registry:
             return True
 
     def set_status(self, endpoint_id: str, status: Status) -> Optional[EndpointOut]:
-        """Set an endpoint's status and update its heartbeat timestamp."""
         with self._lock:
             ep = self._endpoints.get(endpoint_id)
             if not ep:
@@ -44,7 +41,6 @@ class Registry:
             return ep
 
     def heartbeat(self, endpoint_id: str) -> Optional[EndpointOut]:
-        """Update only the last_heartbeat timestamp for an endpoint."""
         with self._lock:
             ep = self._endpoints.get(endpoint_id)
             if not ep:
@@ -53,7 +49,6 @@ class Registry:
             return ep
 
     def list_by_image(self, image_id: str, healthy_only: bool = True) -> List[EndpointOut]:
-        """List endpoints for an image, optionally filtering only healthy ones."""
         with self._lock:
             ids = self._by_image.get(image_id, set())
             eps = [self._endpoints[i] for i in ids]
@@ -63,10 +58,59 @@ class Registry:
             return eps
 
     def services_map(self) -> Dict[str, list[EndpointOut]]:
-        """Return a mapping of image id to the list of its endpoints."""
         with self._lock:
             return {img: [self._endpoints[i] for i in ids] for img, ids in self._by_image.items()}
 
+    def upsert_part(self, part: SystemPartIn) -> SystemPartOut:
+        with self._lock:
+            out = SystemPartOut(**part.model_dump(), last_heartbeat=monotonic())
+            self._parts[part.id] = out
+            self._by_kind.setdefault(part.kind, set()).add(part.id)
+            return out
+
+    def deregister_part(self, part_id: str) -> bool:
+        with self._lock:
+            p = self._parts.pop(part_id, None)
+            if not p:
+                return False
+            ids = self._by_kind.get(p.kind)
+            if ids and part_id in ids:
+                ids.remove(part_id)
+                if not ids:
+                    self._by_kind.pop(p.kind, None)
+            return True
+
+    def set_part_status(self, part_id: str, status: Status) -> Optional[SystemPartOut]:
+        with self._lock:
+            p = self._parts.get(part_id)
+            if not p:
+                return None
+            p.status = status
+            p.last_heartbeat = monotonic()
+            return p
+
+    def heartbeat_part(self, part_id: str) -> Optional[SystemPartOut]:
+        with self._lock:
+            p = self._parts.get(part_id)
+            if not p:
+                return None
+            p.last_heartbeat = monotonic()
+            return p
+
+    def list_parts(self, kind: Optional[str] = None, healthy_only: bool = True) -> List[SystemPartOut]:
+        with self._lock:
+            if kind:
+                ids = self._by_kind.get(kind, set())
+                parts = [self._parts[i] for i in ids]
+            else:
+                parts = list(self._parts.values())
+            if healthy_only:
+                parts = [p for p in parts if p.status == Status.UP]
+            return parts
+
+    def parts_map(self) -> Dict[str, list]:
+        with self._lock:
+            return {k: [self._parts[i] for i in v] for k, v in self._by_kind.items()}
 # Singleton used by routes
 registry = Registry()
 
@@ -79,3 +123,11 @@ def seed_sample_data():
     ]
     for s in samples:
         registry.upsert(s)
+
+    parts = [
+        SystemPartIn(id="orchestrator-1", kind="orchestrator", url="http://127.0.0.1:7100/health", status=Status.UP),
+        SystemPartIn(id="billing-1", kind="billing", url="http://127.0.0.1:7200/health", status=Status.DOWN),
+        SystemPartIn(id="telemetry-1", kind="telemetry", url="http://127.0.0.1:7300/health", status=Status.UP),
+    ]
+    for p in parts:
+        registry.upsert_part(p)
