@@ -1,2 +1,41 @@
-.gitkeep
-.venv
+# ---- Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+*.log
+
+# ---- Envs & secrets
+.env
+.env.*
+.venv/
+venv/
+ENV/
+
+# ---- IDEs/editors
+.idea/
+.vscode/
+*.iml
+
+# ---- OS junk
+.DS_Store
+Thumbs.db
+
+# ---- Docker
+**/.dockerignore
+docker-compose.override.yml
+
+# ---- Node (if you ever add any frontend bits)
+node_modules/
