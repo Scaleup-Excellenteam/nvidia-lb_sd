@@ -36,6 +36,7 @@ def _get_dc_and_picker(request: Request) -> tuple[DiscoveryClient, Picker]:
         # Fallback (not optimal): construct ephemeral ones
         dc = DiscoveryClient.from_settings()
         picker = Picker()
+    print(f"Using DC: {dc}, Picker: {picker}")
     return dc, picker
 
 
