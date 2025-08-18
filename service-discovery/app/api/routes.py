@@ -1,9 +1,19 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
-from app.models.schemas import EndpointIn, EndpointOut, Status, SystemPartIn, SystemPartOut
+from app.models.schemas import EndpointIn, EndpointOut, Status, SystemPartIn, SystemPartOut, ServiceItem, ContainerItem
 from app.services.registry import registry
 
 router = APIRouter()
+
+
+# ------- helpers to map internal -> UI strings -------
+def _part_status_to_ui(s: Status) -> str:
+    # UP -> healthy, DEGRADED -> warning, DOWN -> error
+    return "healthy" if s == Status.UP else ("warning" if s == Status.DEGRADED else "error")
+
+def _endpoint_status_to_ui(s: Status) -> str:
+    # UP -> running, otherwise -> stopped
+    return "running" if s == Status.UP else "stopped"
 
 @router.post("/endpoints", response_model=EndpointOut)
 async def register_endpoint(ep: EndpointIn):
@@ -44,7 +54,7 @@ async def list_endpoints(image_id: str, healthy: bool = True):
 
     return registry.list_by_image(image_id, healthy_only=healthy)
 
-@router.get("/services")
+@router.get("/services-map")
 async def services_map():
     print("[SD] GET /services — shows catalog; returns image_id -> list of endpoints")
 
@@ -108,3 +118,45 @@ async def parts_map():
     print("[SD] GET /parts-map — shows catalog; returns kind -> list of parts")
 
     return registry.parts_map()
+
+
+@router.get("/services", response_model=List[ServiceItem])
+async def services_flat():
+    """
+    Returns:
+      [
+        { "id": "...", "name": "<kind>", "endpoint": "<url>", "status": "healthy|warning|error" },
+        ...
+      ]
+    """
+    parts = registry.list_parts(kind=None, healthy_only=False)
+    return [
+        ServiceItem(
+            id=p.id,
+            name=p.kind,
+            endpoint=p.url,
+            status=_part_status_to_ui(p.status),
+        )
+        for p in parts
+    ]
+
+@router.get("/containers", response_model=List[ContainerItem])
+async def containers_flat(image_id: str = Query(..., description="image id to list")):
+    """
+    Query: ?image_id={imageId}
+    Returns:
+      [
+        { "id": "...", "image_id": "...", "endpoint": "http://host:port", "status": "running|stopped" },
+        ...
+      ]
+    """
+    eps = registry.list_by_image(image_id, healthy_only=False)
+    return [
+        ContainerItem(
+            id=e.id,
+            image_id=e.image_id,
+            endpoint=f"http://{e.host}:{e.port}",
+            status=_endpoint_status_to_ui(e.status),
+        )
+        for e in eps
+    ]

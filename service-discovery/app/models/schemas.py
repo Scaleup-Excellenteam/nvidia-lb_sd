@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from enum import Enum
-from typing import Optional, Dict
+from typing import Optional, Dict, Literal
 
 class Status(str, Enum):
     UP = "UP"
@@ -29,3 +29,15 @@ class SystemPartIn(BaseModel):
 
 class SystemPartOut(SystemPartIn):
     last_heartbeat: Optional[float] = None
+
+class ServiceItem(BaseModel):
+    id: str
+    name: str                      # from part.kind
+    endpoint: Optional[str] = None # from part.url
+    status: Literal["healthy", "warning", "error"]
+
+class ContainerItem(BaseModel):
+    id: str
+    image_id: str
+    endpoint: str                  # "http://{host}:{port}"
+    status: Literal["running", "stopped"]
