@@ -16,7 +16,6 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.api.routes import router
 from app.core.config import settings
-from app.core.logging import setup_logging
 from app.services.discovery_client import DiscoveryClient
 from app.services.picker import Picker
 
@@ -29,7 +28,6 @@ async def lifespan(app: FastAPI):
     DiscoveryClient (HTTP pool) and Picker (backend selection), and
     ensures they live for the duration of the app.
     """
-    setup_logging()
     async with httpx.AsyncClient(timeout=settings.request_timeout_s) as client:
         app.state.dc = DiscoveryClient(client, str(settings.service_discovery_url), settings.request_timeout_s)
         app.state.picker = Picker()

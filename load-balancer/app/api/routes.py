@@ -5,21 +5,21 @@ and issue 307 redirects preserving path and query string.
 """
 from __future__ import annotations
 
-import logging
 from typing import Optional
-
+from logging import getLogger
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from prometheus_client import Counter
-
 from app.services.discovery_client import DiscoveryClient
 from app.services.picker import Picker
 
-log = logging.getLogger("api")
+log =  getLogger("Load-Balancer.API")
 router = APIRouter()
 
 REQUESTS = Counter("lb_requests_total", "Total incoming LB requests")
 SELECTION_ERRORS = Counter("lb_selection_errors_total", "Backend selection failures")
+# New labeled counter to track requests per image_id
+IMAGE_REQUESTS = Counter("lb_image_requests_total", "Total incoming LB requests per image", ["image_id"])
 
 
 def _get_dc_and_picker(request: Request) -> tuple[DiscoveryClient, Picker]:
@@ -36,12 +36,12 @@ def _get_dc_and_picker(request: Request) -> tuple[DiscoveryClient, Picker]:
         # Fallback (not optimal): construct ephemeral ones
         dc = DiscoveryClient.from_settings()
         picker = Picker()
-    print(f"Using DC: {dc}, Picker: {picker}")
+    log.info(f"Using DC: {dc}, Picker: {picker}")
     return dc, picker
 
 
-@router.get("/r/{image_id}")
-@router.get("/r/{image_id}/{path:path}")
+@router.get("/registry/{image_id}")
+@router.get("/registry/{image_id}/{path:path}")
 async def route_to_backend(image_id: str, request: Request, path: str = ""):
     """
     Minimal LB mock:
@@ -50,6 +50,8 @@ async def route_to_backend(image_id: str, request: Request, path: str = ""):
       - 307-redirect the caller to that backend, preserving path & querystring
     """
     REQUESTS.inc()
+    # Increment per-image counter
+    IMAGE_REQUESTS.labels(image_id=image_id).inc()
     dc, picker = _get_dc_and_picker(request)
 
     # 1) ask Service Discovery
@@ -73,3 +75,32 @@ async def route_to_backend(image_id: str, request: Request, path: str = ""):
 
     log.info("redirect %s -> %s", request.url, target_url)
     return RedirectResponse(url=target_url, status_code=307)
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    log.info("Health check passed")
+    return {"status": "OK"}
+
+
+@router.get("/traffic")
+async def traffic_stats():
+    """Traffic statistics endpoint."""
+    log.info("Traffic stats requested")
+    return {"requests_total": REQUESTS._value.get(), "selection_errors_total": SELECTION_ERRORS._value.get()}
+
+@router.get("/traffic/{image_id}")
+async def traffic_stats_for_image(image_id: str):
+    """Traffic statistics for a specific image."""
+    # Retrieve the labeled counter for this image_id
+    c = IMAGE_REQUESTS.labels(image_id=image_id)
+    try:
+        total = c._value.get()
+    except Exception:
+        total = 0.0
+    log.info("Traffic stats for image %s: %d requests", image_id, total)
+    return {"image_id": image_id, "requests_total": total}
+
+
+
