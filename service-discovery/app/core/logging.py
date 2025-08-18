@@ -1,5 +1,5 @@
-import logging
 import os
+import logging
 """
 add this module into your project
 """
@@ -7,8 +7,15 @@ add this module into your project
 # constant of my service name - change per service
 SERVICE_NAME = "Service-Discovery"
 
-# Get log file path from environment variable
-log_file = os.environ.get("LOG_FILE", "/app/logs/combined.log")
+# Get log file path from environment variable (default: /app/logs/combined.log)
+log_dir = os.path.join(os.path.dirname(__file__), "app/logs")
+log_file_path = os.path.join(log_dir, "combined.log")
+
+
+# If using the default path, ensure the directory exists
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.environ.get("LOG_FILE", log_file_path)
+
 
 # Configure logging
 logging.basicConfig(
