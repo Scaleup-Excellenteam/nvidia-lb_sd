@@ -1,5 +1,10 @@
 """Configuration for the Service Discovery mock service."""
 from pydantic import BaseModel
+import os
+HEALTH_POLL_INTERVAL_SEC   = float(os.getenv("HEALTH_POLL_INTERVAL_SEC", "30"))
+HEALTH_REQUEST_TIMEOUT_SEC = float(os.getenv("HEALTH_REQUEST_TIMEOUT_SEC", "2.0"))
+HEALTH_OK_KEY   = os.getenv("HEALTH_OK_KEY", "status")
+HEALTH_OK_VALUE = os.getenv("HEALTH_OK_VALUE", "OK")
 
 class Settings(BaseModel):
     """Static settings for the mock SD service."""
