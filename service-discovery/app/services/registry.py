@@ -2,6 +2,13 @@ from threading import RLock
 from time import monotonic
 from typing import Dict, List, Optional
 from app.models.schemas import EndpointIn, EndpointOut, Status, SystemPartIn, SystemPartOut
+import os
+from time import monotonic
+
+HEARTBEAT_TTL_SEC = float(os.getenv("HEARTBEAT_TTL_SEC", "60"))
+
+def _is_fresh(ts: float) -> bool:
+    return ts is not None and (monotonic() - ts) <= HEARTBEAT_TTL_SEC
 
 class Registry:
     """In-memory mock registry. Thread-safe and simple."""
@@ -54,7 +61,7 @@ class Registry:
             eps = [self._endpoints[i] for i in ids]
             print(eps)
             if healthy_only:
-                eps = [e for e in eps if e.status == Status.UP]
+                eps = [e for e in eps if e.status == Status.UP and _is_fresh(e.last_heartbeat)]
             return eps
 
     def services_map(self) -> Dict[str, list[EndpointOut]]:
@@ -105,7 +112,7 @@ class Registry:
             else:
                 parts = list(self._parts.values())
             if healthy_only:
-                parts = [p for p in parts if p.status == Status.UP]
+                parts = [p for p in parts if p.status == Status.UP and _is_fresh(p.last_heartbeat)]
             return parts
 
     def parts_map(self) -> Dict[str, list]:
