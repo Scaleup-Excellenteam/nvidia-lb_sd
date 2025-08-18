@@ -114,3 +114,22 @@ class DiscoveryClient:
             await asyncio.sleep(backoff * (2**i))
         
         raise RuntimeError(f"Failed to get healthy backends: {last_exc}")
+
+    async def get_healthy_backends(self, image_id: str) -> list[str]:
+        """Return absolute backend base URLs for the image.
+
+        Accepts either service-discovery shapes, e.g.:
+          - {"backends": [{"url": "http://host:port"}, ...]}
+          - [{"host": "h", "port": 1234}, ...]
+          - [{"url": "http://host:port"}, ...]
+          - ["http://host:port", ...]
+        """
+        url = self._image_url(image_id)
+        r = await self._client.get(url)
+        r.raise_for_status()
+        data = r.json()
+        # If wrapped under {backends: [...]}, unwrap
+        if isinstance(data, dict) and "backends" in data:
+            data = data.get("backends", [])
+        # Normalize everything to list[str] URLs
+        return _normalize_endpoints(data)
