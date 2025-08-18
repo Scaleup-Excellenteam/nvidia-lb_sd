@@ -5,7 +5,7 @@ add this module into your project
 """
 
 # constant of my service name - change per service
-SERVICE_NAME = "Service-Discovery"
+SERVICE_NAME = "logging-example"
 
 # Get log file path from environment variable (default: /app/logs/combined.log)
 log_dir = os.path.join(os.path.dirname(__file__), "app/logs")
