@@ -61,7 +61,7 @@ class Registry:
             eps = [self._endpoints[i] for i in ids]
             print(eps)
             if healthy_only:
-                eps = [e for e in eps if e.status == Status.UP and _is_fresh(e.last_heartbeat)]
+                eps = [e for e in eps if e.status == Status.UP]
             return eps
 
     def services_map(self) -> Dict[str, list[EndpointOut]]:
