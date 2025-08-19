@@ -33,7 +33,7 @@ REQUESTS_PER_SECOND = Counter("lb_requests_per_second", "Requests per second by 
 async def route_proxy(image_id: str, path: str, request: Request):
     """Reverse-proxy: forward to chosen backend and stream response back to client."""
     IMAGE_REQUESTS.labels(image_id=image_id).inc()
-
+    
     sd = DiscoveryClient.from_settings()
     backends: List[str] = await sd.get_healthy_backends(image_id)  # e.g., ["http://backend-9001:9000"]
 
