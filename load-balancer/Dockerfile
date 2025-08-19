@@ -12,6 +12,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy only the LB service code
 COPY load-balancer /app
 
-EXPOSE 8000
+EXPOSE 6000
 # SERVICE_DISCOVERY_URL is provided by Compose at runtime
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
